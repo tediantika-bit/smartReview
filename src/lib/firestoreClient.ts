@@ -118,9 +118,24 @@ export const firestoreClient = {
     let list: QRCodeItem[] = [];
 
     try {
-      const snap = await getDocs(collection(db, 'qr_codes'));
-      snap.forEach((d) => {
-        list.push(d.data() as QRCodeItem);
+      const [qrSnap, linkSnap] = await Promise.all([
+        getDocs(collection(db, 'qr_codes')),
+        getDocs(collection(db, 'redirect_links')),
+      ]);
+      const linkMap = new Map<string, string>();
+      linkSnap.forEach((d) => {
+        const data = d.data();
+        if (data.public_id && data.destination_url) {
+          linkMap.set(data.public_id, data.destination_url);
+        }
+      });
+
+      qrSnap.forEach((d) => {
+        const item = d.data() as QRCodeItem;
+        if (!item.destination_url && linkMap.has(item.public_id)) {
+          item.destination_url = linkMap.get(item.public_id) || '';
+        }
+        list.push(item);
       });
     } catch (e) {
       console.warn('Could not read from Firestore, using local cache:', e);
