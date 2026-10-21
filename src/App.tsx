@@ -8,11 +8,17 @@ import { DashboardView } from './views/DashboardView';
 import { AuditLogView } from './views/AuditLogView';
 import { SettingsView } from './views/SettingsView';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { RedirectHandler } from './components/RedirectHandler';
 import { QrCode } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const { admin, loading } = useAuth();
   const [currentTab, setCurrentTab] = useState<NavTab>('qr');
+
+  // Handle customer dynamic redirection /r/:public_id
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/r/')) {
+    return <RedirectHandler />;
+  }
 
   if (loading) {
     return (

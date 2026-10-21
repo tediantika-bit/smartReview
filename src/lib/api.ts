@@ -1,4 +1,5 @@
 import { Admin, QRCodeItem, NFCTagItem, AuditLogItem, DashboardStats, ApiResponse } from '../types';
+import { firestoreClient } from './firestoreClient';
 
 const TOKEN_KEY = 'smartreview_auth_token';
 
@@ -140,50 +141,85 @@ export const api = {
   // Dashboard
   dashboard: {
     getStats: async () => {
-      return request<DashboardStats>('/api/dashboard');
+      try {
+        return await request<DashboardStats>('/api/dashboard');
+      } catch {
+        return await firestoreClient.getDashboardStats();
+      }
     },
   },
 
   // QR Codes
   qr: {
     list: async (search?: string, status?: string) => {
-      const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (status) params.set('status', status);
-      const query = params.toString() ? `?${params.toString()}` : '';
-      return request<QRCodeItem[]>(`/api/qr-codes${query}`);
+      try {
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (status) params.set('status', status);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        return await request<QRCodeItem[]>(`/api/qr-codes${query}`);
+      } catch {
+        return await firestoreClient.listQRs(search, status);
+      }
     },
     getByPublicId: async (publicId: string) => {
-      return request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}`);
+      try {
+        return await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}`);
+      } catch {
+        const found = await firestoreClient.getQRByPublicId(publicId);
+        if (found) return found;
+        throw new Error(`QR Code "${publicId}" tidak ditemukan.`);
+      }
     },
     activate: async (publicId: string, destination_url: string, name?: string) => {
-      return request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/activate`, {
-        method: 'POST',
-        body: JSON.stringify({ destination_url, name }),
-      });
+      try {
+        return await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/activate`, {
+          method: 'POST',
+          body: JSON.stringify({ destination_url, name }),
+        });
+      } catch {
+        return await firestoreClient.activateQR(publicId, destination_url, name);
+      }
     },
     updateDestination: async (publicId: string, destination_url: string, name?: string) => {
-      return request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/destination`, {
-        method: 'PATCH',
-        body: JSON.stringify({ destination_url, name }),
-      });
+      try {
+        return await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/destination`, {
+          method: 'PATCH',
+          body: JSON.stringify({ destination_url, name }),
+        });
+      } catch {
+        return await firestoreClient.updateQRDestination(publicId, destination_url, name);
+      }
     },
     disable: async (publicId: string, reason?: string) => {
-      return request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/disable`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      });
+      try {
+        return await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/disable`, {
+          method: 'POST',
+          body: JSON.stringify({ reason }),
+        });
+      } catch {
+        return await firestoreClient.disableQR(publicId);
+      }
     },
     reactivate: async (publicId: string) => {
-      return request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/reactivate`, {
-        method: 'POST',
-      });
+      try {
+        return await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}/reactivate`, {
+          method: 'POST',
+        });
+      } catch {
+        return await firestoreClient.reactivateQR(publicId);
+      }
     },
     provision: async (count: number, name_prefix?: string) => {
-      return request<QRCodeItem[]>('/api/qr-codes/provision', {
-        method: 'POST',
-        body: JSON.stringify({ count, name_prefix }),
-      });
+      try {
+        return await request<QRCodeItem[]>('/api/qr-codes/provision', {
+          method: 'POST',
+          body: JSON.stringify({ count, name_prefix }),
+        });
+      } catch (err: any) {
+        console.warn('Backend server unreachable for provision, falling back to direct Firestore generation:', err);
+        return await firestoreClient.provisionBatch(count, name_prefix);
+      }
     },
   },
 
