@@ -14,7 +14,10 @@ import {
 } from 'firebase/firestore';
 import fs from 'fs';
 import path from 'path';
-import firebaseConfig from '../firebase-applet-config.json';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const firebaseConfig = require('../firebase-applet-config.json');
 
 // Silence internal gRPC stream chatter in Node.js logs
 try {

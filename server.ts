@@ -3,7 +3,6 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import crypto from 'crypto';
 import http from 'http';
-import { createServer as createViteServer } from 'vite';
 import { db, hashPassword } from './server/db.ts';
 import { firebaseDb } from './server/firebaseDb.ts';
 
@@ -819,6 +818,7 @@ async function startServer() {
 
     // Development mode with Vite middleware
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
+    const { createServer: createViteServer } = await import('vite');
     const vitePromise = createViteServer({
       server: {
         middlewareMode: true,
