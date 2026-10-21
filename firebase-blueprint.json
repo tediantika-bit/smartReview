@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrator account authorized to manage QR codes and NFC tags",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "superadmin"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "created_at", "updated_at"]
+    },
+    "RedirectLink": {
+      "title": "RedirectLink",
+      "description": "Dynamic redirect mapping public_id to target Google Review URL",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "public_id": { "type": "string" },
+        "destination_url": { "type": "string" },
+        "status": { "type": "string", "enum": ["inactive", "active", "disabled"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "public_id", "status", "created_at", "updated_at"]
+    },
+    "QRCode": {
+      "title": "QRCode",
+      "description": "Physical QR code sticker registered in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "redirect_id": { "type": "string" },
+        "public_id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["inactive", "active", "disabled"] },
+        "activated_at": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "redirect_id", "public_id", "status", "created_at", "updated_at"]
+    },
+    "NFCTag": {
+      "title": "NFCTag",
+      "description": "NFC tag physical chip configured for Google Reviews",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "mode": { "type": "string", "enum": ["direct", "redirect"] },
+        "destination_url": { "type": "string" },
+        "redirect_id": { "type": "string" },
+        "public_id": { "type": "string" },
+        "write_status": { "type": "string", "enum": ["pending", "success", "failed"] },
+        "last_written_at": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "mode", "write_status", "created_at", "updated_at"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable log record of administrative actions and URL updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "admin_id": { "type": "string" },
+        "admin_email": { "type": "string" },
+        "action": { "type": "string" },
+        "entity_type": { "type": "string" },
+        "entity_id": { "type": "string" },
+        "details": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "admin_id", "admin_email", "action", "created_at"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Stores admin credentials and role mapping"
+    },
+    "/redirect_links/{public_id}": {
+      "schema": "RedirectLink",
+      "description": "Stores dynamic redirect links accessible by public_id"
+    },
+    "/qr_codes/{qrId}": {
+      "schema": "QRCode",
+      "description": "Stores physical QR code sticker inventory and activation state"
+    },
+    "/nfc_tags/{tagId}": {
+      "schema": "NFCTag",
+      "description": "Stores written and pending NFC tags"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Stores immutable audit log records"
+    }
+  }
+}

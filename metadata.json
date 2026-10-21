@@ -1,0 +1,10 @@
+{
+  "name": "Remix SmartReview",
+  "description": "Progressive Web App (PWA) untuk Aktivasi QR Code dinamis dan NFC Writer Google Review.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

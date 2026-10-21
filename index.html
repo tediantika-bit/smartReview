@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>SmartReview — Aktivasi QR Code & NFC Writer</title>
+    <meta name="description" content="Progressive Web App (PWA) untuk Aktivasi QR Code dinamis dan NFC Writer Google Review." />
+    <meta property="og:title" content="SmartReview — Aktivasi QR Code & NFC Writer" />
+    <meta property="og:description" content="Progressive Web App (PWA) untuk Aktivasi QR Code dinamis dan NFC Writer Google Review." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SmartReview" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <script>
+      (function() {
+        // Suppress harmless Vite HMR WebSocket logs per environment constraints ("HMR: Disabled. Ignore WebSocket errors.")
+        const origError = console.error;
+        console.error = function(...args) {
+          const msg = args.map(a => (typeof a === 'object' && a?.message ? a.message : String(a))).join(' ');
+          if (msg.includes('WebSocket closed without opened') || msg.includes('failed to connect to websocket')) {
+            return;
+          }
+          origError.apply(console, args);
+        };
+
+        // Provide mock handler for vite-hmr protocol so Vite client promise resolves cleanly
+        const NativeWebSocket = window.WebSocket;
+        if (!NativeWebSocket) return;
+        window.WebSocket = function(url, protocols) {
+          const isViteHmr = protocols === 'vite-hmr' || (Array.isArray(protocols) && protocols.includes('vite-hmr'));
+          if (isViteHmr) {
+            const listeners = { open: [], close: [], message: [], error: [] };
+            const fake = {
+              OPEN: 1, CONNECTING: 0, CLOSING: 2, CLOSED: 3,
+              readyState: 1,
+              protocol: 'vite-hmr',
+              url: String(url),
+              binaryType: 'blob',
+              bufferedAmount: 0,
+              extensions: '',
+              onopen: null, onclose: null, onmessage: null, onerror: null,
+              addEventListener(type, listener, options) {
+                if (!listeners[type]) listeners[type] = [];
+                listeners[type].push({ listener, once: options && options.once });
+                if (type === 'open') {
+                  setTimeout(() => {
+                    const evt = new Event('open');
+                    if (fake.onopen) fake.onopen(evt);
+                    listeners.open.forEach(l => l.listener(evt));
+                    listeners.open = listeners.open.filter(l => !l.once);
+                  }, 5);
+                }
+              },
+              removeEventListener(type, listener) {
+                if (listeners[type]) {
+                  listeners[type] = listeners[type].filter(l => l.listener !== listener);
+                }
+              },
+              send() {},
+              close() { fake.readyState = 3; }
+            };
+            return fake;
+          }
+          return new NativeWebSocket(url, protocols);
+        };
+        window.WebSocket.prototype = NativeWebSocket.prototype;
+        window.WebSocket.OPEN = NativeWebSocket.OPEN;
+        window.WebSocket.CONNECTING = NativeWebSocket.CONNECTING;
+        window.WebSocket.CLOSING = NativeWebSocket.CLOSING;
+        window.WebSocket.CLOSED = NativeWebSocket.CLOSED;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,23 @@
+{
+  "admins": [
+    {
+      "id": "72aeefa4-8baf-44db-acda-b748fbee564f",
+      "email": "admin@smartreview.id",
+      "password_hash": "28d17201a0d1a1014eafc909f470f6afc1bee0bd3055e923ccd2893f140061cf",
+      "created_at": "2026-10-20T13:58:15.057Z",
+      "updated_at": "2026-10-20T13:58:15.057Z"
+    }
+  ],
+  "redirect_links": [],
+  "qr_codes": [],
+  "nfc_tags": [],
+  "audit_logs": [],
+  "sessions": [
+    {
+      "token": "60cef253d4be438451ccab1215491a4d957a0e1f4ded5c10556a83c1cfa9f2bb",
+      "admin_id": "72aeefa4-8baf-44db-acda-b748fbee564f",
+      "email": "admin@smartreview.id",
+      "expires_at": 1793115464000
+    }
+  ]
+}

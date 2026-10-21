@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Schema validation helpers
+    function isValidStatus(status) {
+      return status in ['inactive', 'active', 'disabled'];
+    }
+
+    function isValidRedirectLink(data, public_id) {
+      return data.keys().hasAll(['id', 'public_id', 'destination_url', 'status', 'created_at', 'updated_at'])
+        && data.id is string && data.id.size() > 0
+        && data.public_id == public_id
+        && data.destination_url is string
+        && isValidStatus(data.status)
+        && data.created_at is string
+        && data.updated_at is string;
+    }
+
+    function isValidQRCode(data, qrId) {
+      return data.keys().hasAll(['id', 'redirect_id', 'public_id', 'status', 'created_at', 'updated_at'])
+        && data.id == qrId
+        && data.redirect_id is string && data.redirect_id.size() > 0
+        && data.public_id is string && data.public_id.size() > 0
+        && isValidStatus(data.status)
+        && data.created_at is string
+        && data.updated_at is string;
+    }
+
+    function isValidNFCTag(data, tagId) {
+      return data.keys().hasAll(['id', 'name', 'mode', 'write_status', 'created_at', 'updated_at'])
+        && data.id == tagId
+        && data.name is string && data.name.size() > 0
+        && data.mode in ['direct', 'redirect']
+        && data.write_status in ['pending', 'success', 'failed']
+        && data.created_at is string
+        && data.updated_at is string;
+    }
+
+    function isValidAuditLog(data, logId) {
+      return data.keys().hasAll(['id', 'admin_id', 'admin_email', 'action', 'entity_type', 'entity_id', 'created_at'])
+        && data.id == logId
+        && data.admin_id is string && data.admin_id.size() > 0
+        && data.admin_email is string && data.admin_email.size() > 0
+        && data.action is string && data.action.size() > 0
+        && data.entity_type is string
+        && data.entity_id is string
+        && data.created_at is string;
+    }
+
+    // Connection test path
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // 1. Redirect links: Public read for visitor redirection; schema-validated write for server sync
+    match /redirect_links/{public_id} {
+      allow read: if true;
+      allow create, update: if isValidRedirectLink(request.resource.data, public_id);
+      allow delete: if request.auth != null;
+    }
+
+    // 2. QR Codes: Read & schema-validated write for server sync
+    match /qr_codes/{qrId} {
+      allow read: if true;
+      allow create, update: if isValidQRCode(request.resource.data, qrId);
+      allow delete: if request.auth != null;
+    }
+
+    // 3. NFC Tags: Read & schema-validated write for server sync
+    match /nfc_tags/{tagId} {
+      allow read: if true;
+      allow create, update: if isValidNFCTag(request.resource.data, tagId);
+      allow delete: if request.auth != null;
+    }
+
+    // 4. Admins: Read & write for authenticated admin or valid admin record
+    match /admins/{adminId} {
+      allow read, write: if request.auth != null || (
+        request.resource.data.keys().hasAll(['id', 'email', 'created_at', 'updated_at'])
+        && request.resource.data.id == adminId
+      );
+    }
+
+    // 5. Audit Logs: Immutable log records (schema-validated create only, no update or delete)
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow create: if isValidAuditLog(request.resource.data, logId);
+      allow update, delete: if false;
+    }
+  }
+}
