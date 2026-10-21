@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import fs from 'fs';
 import path from 'path';
+import firebaseConfig from '../firebase-applet-config.json';
 
 // Silence internal gRPC stream chatter in Node.js logs
 try {
@@ -27,10 +28,8 @@ let firestoreInstance: Firestore | null = null;
 function getDb(): Firestore | null {
   if (firestoreInstance) return firestoreInstance;
   try {
-    const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
-    if (!fs.existsSync(configPath)) return null;
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    if (!config.projectId || !config.apiKey) return null;
+    const config = firebaseConfig;
+    if (!config || !config.projectId || !config.apiKey) return null;
     const app = getApps().length > 0 ? getApp() : initializeApp(config);
     firestoreInstance = config.firestoreDatabaseId
       ? getFirestore(app, config.firestoreDatabaseId)
@@ -212,11 +211,7 @@ export class FirebaseDatabase {
 
   async checkConnection(): Promise<{ connected: boolean; latencyMs?: number; projectId?: string; databaseId?: string; error?: string }> {
     try {
-      const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
-      if (!fs.existsSync(configPath)) {
-        return { connected: false, error: 'firebase-applet-config.json tidak ditemukan' };
-      }
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const config = firebaseConfig;
       const firestore = getDb();
       if (!firestore) {
         return { connected: false, error: 'Inisialisasi Firestore gagal' };

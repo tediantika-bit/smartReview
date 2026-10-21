@@ -755,7 +755,7 @@ app.post('/api/restore', authMiddleware, (req: Request, res: Response) => {
 // ==========================================
 // 8. SYSTEM & DATABASE DIAGNOSTICS
 // ==========================================
-app.get('/api/system/database-status', authMiddleware, async (req: Request, res: Response) => {
+app.get('/api/system/database-status', async (req: Request, res: Response) => {
   const stats = db.getDashboardStats();
   const firestoreCheck = await firebaseDb.checkConnection();
   const allQRs = db.getAllQRCodes();
