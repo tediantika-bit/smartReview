@@ -171,8 +171,8 @@ export const PrintSheetModal: React.FC<PrintSheetModalProps> = ({
                       </span>
                     </div>
 
-                    <div className="mt-1 text-[9px] font-mono text-blue-600 print:text-black">
-                      smartreview.id/r/{qr.public_id}
+                    <div className="mt-1 text-[9px] font-mono text-blue-600 print:text-black truncate px-1">
+                      {typeof window !== 'undefined' ? `${window.location.host}/r/${qr.public_id}` : `r/${qr.public_id}`}
                     </div>
                   </div>
                 );

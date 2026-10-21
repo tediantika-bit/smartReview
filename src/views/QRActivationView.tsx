@@ -541,6 +541,30 @@ export const QRActivationView: React.FC = () => {
                 </div>
               </form>
 
+              {/* Live Test Redirect Link Box */}
+              {selectedQR.status === 'active' && selectedQR.destination_url && (
+                <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-emerald-900 block">Tautan Pengalihan Aktif:</span>
+                    <span className="text-[11px] font-mono text-emerald-700 break-all block">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/r/${selectedQR.public_id}` : `/r/${selectedQR.public_id}`}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block truncate max-w-md">
+                      Mengarahkan ke: {selectedQR.destination_url}
+                    </span>
+                  </div>
+                  <a
+                    href={`/r/${selectedQR.public_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-xs active:scale-95"
+                  >
+                    <span>Uji Buka Redirect</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )}
+
               {/* Dynamic Redirect Explainer */}
               <div className="pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-1.5">
                 <div className="flex items-center gap-1.5 font-semibold text-slate-700">

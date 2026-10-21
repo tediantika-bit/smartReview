@@ -126,8 +126,8 @@ export const QRStickerCard: React.FC<QRStickerCardProps> = ({ qr, size = 180, sh
           </span>
         </div>
 
-        <div className="mt-2 text-[10px] text-blue-600 font-medium truncate px-2">
-          smartreview.id/r/{qr.public_id}
+        <div className="mt-2 text-[10px] text-blue-600 font-medium truncate px-2 font-mono">
+          {typeof window !== 'undefined' ? `${window.location.host}/r/${qr.public_id}` : `r/${qr.public_id}`}
         </div>
       </div>
 
