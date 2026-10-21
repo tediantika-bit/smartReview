@@ -43,9 +43,41 @@ export const LoginView: React.FC = () => {
           {error && (
             <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
               <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
+              <div className="space-y-1">
+                <span className="font-semibold block">{error}</span>
+                {error.includes('Vercel') || error.includes('404') || error.includes('Backend') ? (
+                  <span className="text-[11px] text-rose-600/90 block">
+                    Tip: Jika baru saja deploy ke Vercel, pastikan file <code>vercel.json</code> dan folder <code>api/</code> sudah ikut ter-upload di repository GitHub Anda.
+                  </span>
+                ) : null}
+              </div>
             </div>
           )}
+
+          {/* Quick Default Credentials Card */}
+          <div className="mb-5 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5 text-blue-900 font-bold text-xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                <span>Akun Administrator Default:</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@smartreview.id');
+                  setPassword('admin123456');
+                  setError(null);
+                }}
+                className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold rounded-lg transition active:scale-95 shadow-xs"
+              >
+                Gunakan Akun Ini
+              </button>
+            </div>
+            <div className="text-[11px] text-slate-600 font-mono space-y-0.5">
+              <div>Email: <strong className="text-slate-900">admin@smartreview.id</strong></div>
+              <div>Password: <strong className="text-slate-900">admin123456</strong></div>
+            </div>
+          </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
@@ -106,6 +138,14 @@ export const LoginView: React.FC = () => {
             <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
             <span>Sesi aman terenkripsi & verifikasi server-side</span>
           </div>
+        </div>
+
+        {/* Vercel Deployment Troubleshooting Note */}
+        <div className="mt-4 p-3.5 bg-slate-100/80 rounded-2xl border border-slate-200 text-xs text-slate-600 space-y-1">
+          <p className="font-semibold text-slate-800">Catatan Deploy di Vercel:</p>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Aplikasi ini menggabungkan antarmuka Vite SPA dan backend Node.js/Express. Kami telah menambahkan konfigurasi <code>vercel.json</code> dan <code>api/index.ts</code> agar rute autentikasi <code>/api/*</code> dan pengalihan <code>/r/*</code> diproses sebagai Serverless Functions di Vercel.
+          </p>
         </div>
 
         {/* PWA Install Promo if available */}

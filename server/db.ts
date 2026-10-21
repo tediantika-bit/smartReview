@@ -71,7 +71,9 @@ export interface DatabaseSchema {
   sessions?: SessionRecord[];
 }
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_DIR = process.env.VERCEL
+  ? path.resolve('/tmp', 'data')
+  : path.resolve(process.cwd(), 'data');
 const DB_FILE = path.resolve(DATA_DIR, 'smartreview-db.json');
 
 export function hashPassword(password: string): string {
@@ -112,7 +114,18 @@ class Database {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         this.data = JSON.parse(raw);
       } else {
-        this.seedInitialData();
+        // In Vercel, read existing seed data from repository if available
+        const originalPath = path.resolve(process.cwd(), 'data', 'smartreview-db.json');
+        if (fs.existsSync(originalPath)) {
+          try {
+            const raw = fs.readFileSync(originalPath, 'utf-8');
+            this.data = JSON.parse(raw);
+          } catch {
+            this.seedInitialData();
+          }
+        } else {
+          this.seedInitialData();
+        }
         this.save();
       }
     } catch (err) {
