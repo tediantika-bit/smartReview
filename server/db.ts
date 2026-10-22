@@ -71,6 +71,16 @@ export interface DatabaseSchema {
   sessions?: SessionRecord[];
 }
 
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+let bundledDb: DatabaseSchema | null = null;
+try {
+  bundledDb = require('../data/smartreview-db.json');
+} catch {
+  bundledDb = null;
+}
+
 const DATA_DIR = process.env.VERCEL
   ? path.resolve('/tmp', 'data')
   : path.resolve(process.cwd(), 'data');
@@ -113,8 +123,11 @@ class Database {
       if (fs.existsSync(DB_FILE)) {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         this.data = JSON.parse(raw);
+      } else if (bundledDb && bundledDb.qr_codes && bundledDb.qr_codes.length > 0) {
+        this.data = JSON.parse(JSON.stringify(bundledDb));
+        this.save();
       } else {
-        // In Vercel, read existing seed data from repository if available
+        // Fallback: check raw path
         const originalPath = path.resolve(process.cwd(), 'data', 'smartreview-db.json');
         if (fs.existsSync(originalPath)) {
           try {
@@ -130,7 +143,11 @@ class Database {
       }
     } catch (err) {
       console.error('Error initializing database, using seed:', err);
-      this.seedInitialData();
+      if (bundledDb && bundledDb.qr_codes && bundledDb.qr_codes.length > 0) {
+        this.data = JSON.parse(JSON.stringify(bundledDb));
+      } else {
+        this.seedInitialData();
+      }
     }
   }
 

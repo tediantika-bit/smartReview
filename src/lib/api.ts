@@ -142,7 +142,11 @@ export const api = {
   dashboard: {
     getStats: async () => {
       try {
-        return await request<DashboardStats>('/api/dashboard');
+        const stats = await request<DashboardStats>('/api/dashboard');
+        if (stats && stats.qr_summary && stats.qr_summary.total > 0) {
+          return stats;
+        }
+        return await firestoreClient.getDashboardStats();
       } catch {
         return await firestoreClient.getDashboardStats();
       }
@@ -157,19 +161,30 @@ export const api = {
         if (search) params.set('search', search);
         if (status) params.set('status', status);
         const query = params.toString() ? `?${params.toString()}` : '';
-        return await request<QRCodeItem[]>(`/api/qr-codes${query}`);
+        const data = await request<QRCodeItem[]>(`/api/qr-codes${query}`);
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+        // If server returns empty list, load directly from Cloud Firestore
+        const firestoreList = await firestoreClient.listQRs(search, status);
+        if (firestoreList && firestoreList.length > 0) {
+          return firestoreList;
+        }
+        return data || [];
       } catch {
         return await firestoreClient.listQRs(search, status);
       }
     },
     getByPublicId: async (publicId: string) => {
       try {
-        return await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}`);
+        const res = await request<QRCodeItem>(`/api/qr-codes/${encodeURIComponent(publicId)}`);
+        if (res && res.public_id) return res;
       } catch {
-        const found = await firestoreClient.getQRByPublicId(publicId);
-        if (found) return found;
-        throw new Error(`QR Code "${publicId}" tidak ditemukan.`);
+        // fallback to firestore
       }
+      const found = await firestoreClient.getQRByPublicId(publicId);
+      if (found) return found;
+      throw new Error(`QR Code "${publicId}" tidak ditemukan.`);
     },
     activate: async (publicId: string, destination_url: string, name?: string) => {
       try {

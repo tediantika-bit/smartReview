@@ -330,7 +330,10 @@ app.post('/api/auth/change-password', authMiddleware, (req: Request, res: Respon
 // ==========================================
 // 3. DASHBOARD SUMMARY
 // ==========================================
-app.get('/api/dashboard', authMiddleware, (req: Request, res: Response) => {
+app.get('/api/dashboard', authMiddleware, async (req: Request, res: Response) => {
+  if (db.getAllQRCodes().length === 0) {
+    await db.hydrateFromFirestore().catch(() => {});
+  }
   const stats = db.getDashboardStats();
   return res.json({ success: true, data: stats });
 });
@@ -340,7 +343,10 @@ app.get('/api/dashboard', authMiddleware, (req: Request, res: Response) => {
 // ==========================================
 
 // List all QR codes
-app.get('/api/qr-codes', authMiddleware, (req: Request, res: Response) => {
+app.get('/api/qr-codes', authMiddleware, async (req: Request, res: Response) => {
+  if (db.getAllQRCodes().length === 0) {
+    await db.hydrateFromFirestore().catch(() => {});
+  }
   const list = db.getAllQRCodes();
   const search = typeof req.query.search === 'string' ? req.query.search.toLowerCase().trim() : '';
   const status = typeof req.query.status === 'string' ? req.query.status : '';
