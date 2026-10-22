@@ -1,4 +1,4 @@
-import { Admin, QRCodeItem, NFCTagItem, AuditLogItem, DashboardStats, ApiResponse } from '../types';
+import { Admin, QRCodeItem, NFCTagItem, AuditLogItem, DashboardStats, ScanAnalyticsSummary, ApiResponse } from '../types';
 import { firestoreClient } from './firestoreClient';
 
 const TOKEN_KEY = 'smartreview_auth_token';
@@ -149,6 +149,21 @@ export const api = {
         return await firestoreClient.getDashboardStats();
       } catch {
         return await firestoreClient.getDashboardStats();
+      }
+    },
+  },
+
+  // Analytics
+  analytics: {
+    getSummary: async () => {
+      try {
+        const data = await request<ScanAnalyticsSummary>('/api/analytics');
+        if (data && typeof data.total_scans === 'number') {
+          return data;
+        }
+        return await firestoreClient.getScanAnalyticsSummary();
+      } catch {
+        return await firestoreClient.getScanAnalyticsSummary();
       }
     },
   },

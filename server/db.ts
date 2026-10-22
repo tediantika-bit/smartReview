@@ -26,7 +26,10 @@ export interface QRCodeRecord {
   public_id: string;
   name?: string;
   status: 'inactive' | 'active' | 'disabled';
+  destination_url?: string;
   activated_at: string | null;
+  scan_count?: number;
+  last_scanned_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,6 +58,15 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface ScanEvent {
+  id: string;
+  public_id: string;
+  qr_name?: string;
+  device_type: 'android' | 'ios' | 'desktop' | 'other';
+  user_agent?: string;
+  created_at: string;
+}
+
 export interface SessionRecord {
   token: string;
   admin_id: string;
@@ -68,6 +80,7 @@ export interface DatabaseSchema {
   qr_codes: QRCodeRecord[];
   nfc_tags: NFCTag[];
   audit_logs: AuditLog[];
+  scan_events?: ScanEvent[];
   sessions?: SessionRecord[];
 }
 
@@ -521,6 +534,115 @@ class Database {
     return this.data.audit_logs.slice(0, limit);
   }
 
+  // Scan Tracking & Analytics
+  recordScan(publicId: string, deviceType: 'android' | 'ios' | 'desktop' | 'other' = 'other', userAgent = ''): void {
+    const now = new Date().toISOString();
+    const qr = this.data.qr_codes.find((q) => q.public_id === publicId);
+    if (qr) {
+      qr.scan_count = (qr.scan_count || 0) + 1;
+      qr.last_scanned_at = now;
+      qr.updated_at = now;
+      this.syncQRToFirebase(qr);
+    }
+
+    if (!this.data.scan_events) {
+      this.data.scan_events = [];
+    }
+
+    const event: ScanEvent = {
+      id: crypto.randomUUID(),
+      public_id: publicId,
+      qr_name: qr?.name || `QR #${publicId}`,
+      device_type: deviceType,
+      user_agent: (userAgent || '').slice(0, 200),
+      created_at: now,
+    };
+
+    this.data.scan_events.unshift(event);
+    if (this.data.scan_events.length > 1000) {
+      this.data.scan_events = this.data.scan_events.slice(0, 1000);
+    }
+    this.save();
+    firebaseDb.recordScanEvent(event).catch(() => {});
+  }
+
+  getScanAnalyticsSummary(): any {
+    const qrs = this.getAllQRCodes();
+    const events = this.data.scan_events || [];
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const totalScans = Math.max(
+      qrs.reduce((acc, q) => acc + (q.scan_count || 0), 0),
+      events.length
+    );
+
+    const scansToday = events.filter((e) => e.created_at.slice(0, 10) === todayStr).length;
+    const scans7Days = events.filter((e) => new Date(e.created_at) >= sevenDaysAgo).length;
+
+    // Top QRs
+    const topQRs = [...qrs]
+      .sort((a, b) => (b.scan_count || 0) - (a.scan_count || 0))
+      .slice(0, 10)
+      .map((q) => ({
+        public_id: q.public_id,
+        name: q.name || `QR #${q.public_id}`,
+        scan_count: q.scan_count || 0,
+        last_scanned_at: q.last_scanned_at || null,
+        status: q.status,
+        destination_url: q.destination_url || '',
+      }));
+
+    // Hourly distribution (0 to 23)
+    const hourlyMap: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) hourlyMap[h] = 0;
+    events.forEach((e) => {
+      const d = new Date(e.created_at);
+      const h = d.getHours();
+      hourlyMap[h] = (hourlyMap[h] || 0) + 1;
+    });
+
+    const hourlyDistribution = Array.from({ length: 24 }).map((_, h) => ({
+      hour: h,
+      label: `${h.toString().padStart(2, '0')}:00`,
+      count: hourlyMap[h] || 0,
+    }));
+
+    // Daily trends (last 7 days)
+    const dailyTrends: Array<{ date: string; label: string; count: number }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const ds = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+      const count = events.filter((e) => e.created_at.slice(0, 10) === ds).length;
+      dailyTrends.push({ date: ds, label, count });
+    }
+
+    // Device breakdown
+    const devices = { android: 0, ios: 0, desktop: 0, other: 0 };
+    events.forEach((e) => {
+      const dt = e.device_type;
+      if (dt in devices) {
+        devices[dt as keyof typeof devices]++;
+      } else {
+        devices.other++;
+      }
+    });
+
+    return {
+      total_scans: totalScans,
+      scans_today: scansToday,
+      scans_7_days: scans7Days,
+      top_qrs: topQRs,
+      hourly_distribution: hourlyDistribution,
+      daily_trends: dailyTrends,
+      device_breakdown: devices,
+      recent_scans: events.slice(0, 20),
+    };
+  }
+
   // Dashboard Stats
   getDashboardStats() {
     const qrList = this.data.qr_codes;
@@ -541,6 +663,7 @@ class Database {
         pending: nfcList.filter((n) => n.write_status === 'pending').length,
       },
       recent_logs: this.data.audit_logs.slice(0, 5),
+      scan_analytics: this.getScanAnalyticsSummary(),
     };
   }
 

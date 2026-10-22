@@ -10,7 +10,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { QRCodeItem, NFCTagItem, DashboardStats, AuditLogItem } from '../types';
+import { QRCodeItem, NFCTagItem, DashboardStats, AuditLogItem, ScanAnalyticsSummary, ScanEventItem } from '../types';
 
 function safeUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -302,9 +302,144 @@ export const firestoreClient = {
     return updatedQR;
   },
 
+  // Scan Tracking & Analytics
+  async recordScanClient(publicId: string, deviceType: 'android' | 'ios' | 'desktop' | 'other' = 'other', userAgent = ''): Promise<void> {
+    const now = new Date().toISOString();
+    const eventId = safeUUID();
+
+    const qr = await this.getQRByPublicId(publicId);
+    const event: ScanEventItem = {
+      id: eventId,
+      public_id: publicId,
+      qr_name: qr?.name || `QR #${publicId}`,
+      device_type: deviceType,
+      user_agent: (userAgent || '').slice(0, 200),
+      created_at: now,
+    };
+
+    // 1. Write scan_event doc
+    try {
+      await setDoc(doc(db, 'scan_events', eventId), event);
+    } catch (e) {
+      console.warn('Failed to record scan event in Firestore:', e);
+    }
+
+    // 2. Increment scan_count on qr_codes doc
+    if (qr) {
+      const newCount = (qr.scan_count || 0) + 1;
+      try {
+        await updateDoc(doc(db, 'qr_codes', qr.id), {
+          scan_count: newCount,
+          last_scanned_at: now,
+          updated_at: now,
+        });
+      } catch (e) {
+        console.warn('Failed to update QR scan_count in Firestore:', e);
+      }
+
+      // Update local cache
+      const local = getLocalQRs();
+      const idx = local.findIndex((q) => q.public_id === publicId);
+      if (idx !== -1) {
+        local[idx].scan_count = newCount;
+        local[idx].last_scanned_at = now;
+        saveLocalQRs(local);
+      }
+    }
+  },
+
+  async getScanAnalyticsSummary(): Promise<ScanAnalyticsSummary> {
+    const qrs = await this.listQRs();
+    const events: ScanEventItem[] = [];
+
+    try {
+      const snap = await getDocs(query(collection(db, 'scan_events'), limit(500)));
+      snap.forEach((d) => {
+        events.push(d.data() as ScanEventItem);
+      });
+    } catch (e) {
+      console.warn('Could not load scan_events from Firestore:', e);
+    }
+
+    events.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const totalScans = Math.max(
+      qrs.reduce((acc, q) => acc + (q.scan_count || 0), 0),
+      events.length
+    );
+
+    const scansToday = events.filter((e) => e.created_at.slice(0, 10) === todayStr).length;
+    const scans7Days = events.filter((e) => new Date(e.created_at) >= sevenDaysAgo).length;
+
+    // Top QRs
+    const topQRs = [...qrs]
+      .sort((a, b) => (b.scan_count || 0) - (a.scan_count || 0))
+      .slice(0, 10)
+      .map((q) => ({
+        public_id: q.public_id,
+        name: q.name || `QR #${q.public_id}`,
+        scan_count: q.scan_count || 0,
+        last_scanned_at: q.last_scanned_at || null,
+        status: q.status,
+        destination_url: q.destination_url || '',
+      }));
+
+    // Hourly distribution
+    const hourlyMap: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) hourlyMap[h] = 0;
+    events.forEach((e) => {
+      const d = new Date(e.created_at);
+      const h = d.getHours();
+      hourlyMap[h] = (hourlyMap[h] || 0) + 1;
+    });
+
+    const hourlyDistribution = Array.from({ length: 24 }).map((_, h) => ({
+      hour: h,
+      label: `${h.toString().padStart(2, '0')}:00`,
+      count: hourlyMap[h] || 0,
+    }));
+
+    // Daily trends
+    const dailyTrends: Array<{ date: string; label: string; count: number }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const ds = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+      const count = events.filter((e) => e.created_at.slice(0, 10) === ds).length;
+      dailyTrends.push({ date: ds, label, count });
+    }
+
+    // Devices
+    const devices = { android: 0, ios: 0, desktop: 0, other: 0 };
+    events.forEach((e) => {
+      const dt = e.device_type;
+      if (dt in devices) {
+        devices[dt as keyof typeof devices]++;
+      } else {
+        devices.other++;
+      }
+    });
+
+    return {
+      total_scans: totalScans,
+      scans_today: scansToday,
+      scans_7_days: scans7Days,
+      top_qrs: topQRs,
+      hourly_distribution: hourlyDistribution,
+      daily_trends: dailyTrends,
+      device_breakdown: devices,
+      recent_scans: events.slice(0, 20),
+    };
+  },
+
   // Dashboard Stats
   async getDashboardStats(): Promise<DashboardStats> {
     const list = await this.listQRs();
+    const scanAnalytics = await this.getScanAnalyticsSummary();
     return {
       qr_summary: {
         total: list.length,
@@ -320,6 +455,7 @@ export const firestoreClient = {
         pending: 0,
       },
       recent_logs: [],
+      scan_analytics: scanAnalytics,
     };
   },
 };

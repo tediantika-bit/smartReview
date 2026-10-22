@@ -48,6 +48,14 @@ service cloud.firestore {
         && data.created_at is string;
     }
 
+    function isValidScanEvent(data, eventId) {
+      return data.keys().hasAll(['id', 'public_id', 'device_type', 'created_at'])
+        && data.id == eventId
+        && data.public_id is string && data.public_id.size() > 0 && data.public_id.size() <= 64
+        && data.device_type in ['android', 'ios', 'desktop', 'other']
+        && data.created_at is string;
+    }
+
     // Connection test path
     match /test/{docId} {
       allow read: if true;
@@ -86,6 +94,13 @@ service cloud.firestore {
     match /audit_logs/{logId} {
       allow read: if true;
       allow create: if isValidAuditLog(request.resource.data, logId);
+      allow update, delete: if false;
+    }
+
+    // 6. Scan Events: Read for admin analytics, validated create for visitor scans
+    match /scan_events/{eventId} {
+      allow read: if true;
+      allow create: if isValidScanEvent(request.resource.data, eventId);
       allow update, delete: if false;
     }
   }

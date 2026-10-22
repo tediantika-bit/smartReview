@@ -76,6 +76,20 @@
         "created_at": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "admin_id", "admin_email", "action", "created_at"]
+    },
+    "ScanEvent": {
+      "title": "ScanEvent",
+      "description": "Logged scan event when a visitor scans a dynamic QR code sticker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "public_id": { "type": "string" },
+        "qr_name": { "type": "string" },
+        "device_type": { "type": "string", "enum": ["android", "ios", "desktop", "other"] },
+        "user_agent": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "public_id", "device_type", "created_at"]
     }
   },
   "firestore": {
@@ -98,6 +112,11 @@
     "/audit_logs/{logId}": {
       "schema": "AuditLog",
       "description": "Stores immutable audit log records"
+    },
+    "/scan_events/{eventId}": {
+      "schema": "ScanEvent",
+      "description": "Stores logged visitor scan events for analytics"
     }
   }
 }
+

@@ -22,6 +22,7 @@ import {
   Printer,
   FileSpreadsheet,
   Archive,
+  Eye,
 } from 'lucide-react';
 import { QRCodeItem } from '../types';
 import { api } from '../lib/api';
@@ -445,6 +446,40 @@ export const QRActivationView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Scan Analytics Mini Banner */}
+              <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <Eye className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block truncate">Total Scan Ulasan</span>
+                    <p className="text-sm font-black text-slate-900 leading-tight">
+                      {(selectedQR.scan_count || 0).toLocaleString('id-ID')} <span className="text-xs font-normal text-slate-500">kali</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 border-l border-slate-200/80 pl-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block truncate">Terakhir Dipindai</span>
+                    <p className="text-xs font-semibold text-slate-800 truncate leading-tight">
+                      {selectedQR.last_scanned_at
+                        ? new Date(selectedQR.last_scanned_at).toLocaleString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Belum pernah'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Activation / Update Form */}
               <form onSubmit={handleActivateOrUpdate} className="space-y-4">
                 <div>
@@ -688,9 +723,15 @@ export const QRActivationView: React.FC = () => {
                           <p className="font-semibold text-slate-900 text-xs truncate">
                             {qr.name || `QR #${qr.public_id}`}
                           </p>
-                          <p className="text-[10px] text-slate-400 font-mono truncate">
-                            ID: {qr.public_id}
-                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-slate-400 font-mono truncate">
+                              ID: {qr.public_id}
+                            </span>
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                              <Eye className="w-2.5 h-2.5" />
+                              {qr.scan_count || 0}
+                            </span>
+                          </div>
                         </div>
                       </div>
 

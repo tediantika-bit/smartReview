@@ -173,6 +173,20 @@ app.get('/r/:public_id', async (req: Request, res: Response) => {
 
   // Active redirect
   if (redirect.status === 'active' && redirect.destination_url) {
+    // Record scan analytics in background
+    const ua = (req.headers['user-agent'] as string) || '';
+    const lowerUA = ua.toLowerCase();
+    let device: 'android' | 'ios' | 'desktop' | 'other' = 'other';
+    if (lowerUA.includes('android')) device = 'android';
+    else if (lowerUA.includes('iphone') || lowerUA.includes('ipad') || lowerUA.includes('ipod')) device = 'ios';
+    else if ((lowerUA.includes('windows') || lowerUA.includes('macintosh') || lowerUA.includes('linux')) && !lowerUA.includes('mobile')) device = 'desktop';
+
+    try {
+      db.recordScan(publicId, device, ua);
+    } catch (e) {
+      console.warn('Failed to record scan in server:', e);
+    }
+
     // PRD Section 11.5 & 12.16 requires HTTP 302 redirect
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -181,6 +195,17 @@ app.get('/r/:public_id', async (req: Request, res: Response) => {
   }
 
   return res.status(500).send('Kesalahan konfigurasi redirect.');
+});
+
+// ==========================================
+// 1.1 SCAN ANALYTICS ENDPOINT
+// ==========================================
+app.get('/api/analytics', authMiddleware, async (req: Request, res: Response) => {
+  if (db.getAllQRCodes().length === 0) {
+    await db.hydrateFromFirestore().catch(() => {});
+  }
+  const summary = db.getScanAnalyticsSummary();
+  return res.json({ success: true, data: summary });
 });
 
 // ==========================================

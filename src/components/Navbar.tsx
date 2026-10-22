@@ -16,7 +16,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onTabChange }) => {
   const navItems: { id: NavTab; label: string; icon: React.FC<{ className?: string }>; isPrimary?: boolean }[] = [
     { id: 'qr', label: 'Aktivasi QR', icon: QrCode, isPrimary: true },
     { id: 'nfc', label: 'NFC Writer', icon: Radio, isPrimary: true },
-    { id: 'dashboard', label: 'Ringkasan', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Analitik & Ringkasan', icon: LayoutDashboard },
     { id: 'audit', label: 'Log Audit', icon: ShieldCheck },
     { id: 'settings', label: 'Pengaturan', icon: Settings },
   ];

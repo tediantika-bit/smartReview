@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { firestoreClient } from '../lib/firestoreClient';
 import { AlertCircle, QrCode, ExternalLink, RefreshCw, XCircle } from 'lucide-react';
 
 export const RedirectHandler: React.FC = () => {
@@ -27,6 +28,17 @@ export const RedirectHandler: React.FC = () => {
           if (data.status === 'active' && data.destination_url) {
             setStatus('redirecting');
             setTargetUrl(data.destination_url);
+
+            // Record scan analytics event in background
+            const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+            const lowerUA = ua.toLowerCase();
+            let device: 'android' | 'ios' | 'desktop' | 'other' = 'other';
+            if (lowerUA.includes('android')) device = 'android';
+            else if (lowerUA.includes('iphone') || lowerUA.includes('ipad') || lowerUA.includes('ipod')) device = 'ios';
+            else if ((lowerUA.includes('windows') || lowerUA.includes('macintosh') || lowerUA.includes('linux')) && !lowerUA.includes('mobile')) device = 'desktop';
+
+            firestoreClient.recordScanClient(cleanId, device, ua).catch(() => {});
+
             // Instant redirect
             window.location.replace(data.destination_url);
             return;

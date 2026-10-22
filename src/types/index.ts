@@ -12,6 +12,8 @@ export interface QRCodeItem {
   status: 'inactive' | 'active' | 'disabled';
   destination_url?: string;
   activated_at: string | null;
+  scan_count?: number;
+  last_scanned_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +42,38 @@ export interface AuditLogItem {
   created_at: string;
 }
 
+export interface ScanEventItem {
+  id: string;
+  public_id: string;
+  qr_name?: string;
+  device_type: 'android' | 'ios' | 'desktop' | 'other';
+  user_agent?: string;
+  created_at: string;
+}
+
+export interface ScanAnalyticsSummary {
+  total_scans: number;
+  scans_today: number;
+  scans_7_days: number;
+  top_qrs: Array<{
+    public_id: string;
+    name: string;
+    scan_count: number;
+    last_scanned_at: string | null;
+    status: 'inactive' | 'active' | 'disabled';
+    destination_url?: string;
+  }>;
+  hourly_distribution: Array<{ hour: number; label: string; count: number }>;
+  daily_trends: Array<{ date: string; label: string; count: number }>;
+  device_breakdown: {
+    android: number;
+    ios: number;
+    desktop: number;
+    other: number;
+  };
+  recent_scans: ScanEventItem[];
+}
+
 export interface DashboardStats {
   qr_summary: {
     total: number;
@@ -55,6 +89,7 @@ export interface DashboardStats {
     pending: number;
   };
   recent_logs: AuditLogItem[];
+  scan_analytics?: ScanAnalyticsSummary;
 }
 
 export interface ApiResponse<T> {

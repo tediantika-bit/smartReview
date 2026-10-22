@@ -212,6 +212,30 @@ export class FirebaseDatabase {
     }
   }
 
+  // --- SCAN EVENTS & ANALYTICS ---
+  async recordScanEvent(event: any): Promise<void> {
+    try {
+      const firestore = getDb();
+      if (!firestore) return;
+      await setDoc(doc(firestore, 'scan_events', event.id), event);
+    } catch (err) {
+      console.warn('Failed to save scan event to Firestore:', err);
+    }
+  }
+
+  async getAllScanEvents(maxLimit = 500): Promise<any[]> {
+    try {
+      const firestore = getDb();
+      if (!firestore) return [];
+      const snap = await getDocs(query(collection(firestore, 'scan_events'), limit(maxLimit)));
+      const list: any[] = [];
+      snap.forEach((d) => list.push(d.data()));
+      return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } catch {
+      return [];
+    }
+  }
+
   async checkConnection(): Promise<{ connected: boolean; latencyMs?: number; projectId?: string; databaseId?: string; error?: string }> {
     try {
       const config = firebaseConfig;
